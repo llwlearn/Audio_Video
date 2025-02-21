@@ -363,10 +363,11 @@ border-radius: 37px;</string>
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">border: none;</string>
+     <string notr="true">border: none;
+text-align: left;</string>
     </property>
     <property name="text">
-     <string>如果爱忘了（live）-  汪苏泷/单依纯</string>
+     <string/>
     </property>
    </widget>
    <widget class="QPushButton" name="AddToPlaylist">
@@ -458,7 +459,7 @@ border: none;</string>
       <height>100</height>
      </rect>
     </property>
-    <widget class="QPushButton" name="pause">
+    <widget class="QPushButton" name="PlayOrPause">
      <property name="geometry">
       <rect>
        <x>210</x>
@@ -471,7 +472,7 @@ border: none;</string>
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="styleSheet">
-      <string notr="true">image: url(:/new/prefix1/pause.png);
+      <string notr="true">image: url(:/new/prefix1/play.png);
 border: none;
 </string>
      </property>
@@ -559,7 +560,7 @@ border: none;</string>
       <string/>
      </property>
     </widget>
-    <widget class="QSlider" name="progressSlider">
+    <widget class="QSlider" name="slider">
      <property name="geometry">
       <rect>
        <x>42</x>
@@ -578,35 +579,72 @@ border: none;</string>
     margin-right: 8px;
 }
 
-/* 默认水平滑块的样式 */
 QSlider::handle:horizontal {
-    background: transparent;
+    background: rgb(255, 255, 255); /* 设置滑块颜色为白色 */
     width: 16px;
     height: 16px;
     margin: -6px 0;
     border-radius: 8px;
-    transition: all 0.3s ease; /* 添加过渡效果 */
+    transition: all 0.3s ease;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5) inset; /* 设置阴影为内阴影，主要在滑块下方显示 */
 }
 
-/* 悬停时水平滑块的样式 */
 QSlider::handle:horizontal:hover {
-    background: rgb(0, 0, 0); /* 悬停时滑块颜色变为黑色 */
-    width: 16px;
-    height: 16px;
-    margin: -6px 0;
-    border-radius: 8px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3); /* 添加阴影效果 */
+    box-shadow: 0px 6px 8px rgba(0, 0, 0, 0.5) inset; /* 悬停时阴影效果更明显 */
 }
 
-/* 滑轨的样式 */
 QSlider::groove:horizontal {
-    background: rgb(242, 107, 130);
+    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgb(242, 107, 130), stop:1 rgb(242, 107, 130));
     height: 5px;
+    border-radius: 2px;
+}
+
+QSlider::sub-page:horizontal {
+    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgb(255, 0, 0), stop:1 rgb(255, 0, 0));
+    border-radius: 2px;
+}
+
+QSlider::add-page:horizontal {
+    background: rgb(218, 220, 223); /* 设置滑块右侧部分的颜色 */
     border-radius: 2px;
 }</string>
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="duration">
+     <property name="geometry">
+      <rect>
+       <x>430</x>
+       <y>77</y>
+       <width>36</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: none;
+font-size: 11px;</string>
+     </property>
+     <property name="text">
+      <string>00:00</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="Play_duration">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>77</y>
+       <width>36</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: none;
+font-size: 11px;</string>
+     </property>
+     <property name="text">
+      <string>00:00</string>
      </property>
     </widget>
    </widget>
@@ -973,30 +1011,7 @@ color: rgb(236, 212, 207);</string>
     </property>
    </widget>
   </widget>
-  <widget class="QPushButton" name="pushButton">
-   <property name="geometry">
-    <rect>
-     <x>350</x>
-     <y>22</y>
-     <width>58</width>
-     <height>44</height>
-    </rect>
-   </property>
-   <property name="cursor">
-    <cursorShape>PointingHandCursor</cursorShape>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">border: 2px solid rgb(226, 229, 233);
-border-radius: 10px;
-border-right: none;
-border-top-right-radius: none
-</string>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="search_for">
    <property name="geometry">
     <rect>
      <x>683</x>
@@ -1020,17 +1035,15 @@ image: url(:/new/prefix1/search_for.png);</string>
   <widget class="QLineEdit" name="search">
    <property name="geometry">
     <rect>
-     <x>408</x>
+     <x>360</x>
      <y>22</y>
-     <width>264</width>
+     <width>300</width>
      <height>44</height>
     </rect>
    </property>
    <property name="styleSheet">
     <string notr="true">border: 2px solid rgb(226, 229, 233);
-border-radius: 10px;
-border-left: none;
-border-top-left-radius: none</string>
+border-radius: 10px;</string>
    </property>
   </widget>
   <widget class="QWidget" name="MainWidget" native="true">
@@ -1043,14 +1056,47 @@ border-top-left-radius: none</string>
     </rect>
    </property>
   </widget>
+  <widget class="QSlider" name="VolumeSlider">
+   <property name="geometry">
+    <rect>
+     <x>1200</x>
+     <y>710</y>
+     <width>40</width>
+     <height>160</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Vertical</enum>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="nightModeButton">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>750</y>
+     <width>80</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="cursor">
+    <cursorShape>PointingHandCursor</cursorShape>
+   </property>
+   <property name="text">
+    <string>夜间模式</string>
+   </property>
+  </widget>
   <zorder>search</zorder>
   <zorder>retreat</zorder>
   <zorder>LeftWidget</zorder>
   <zorder>DownWidget</zorder>
   <zorder>RightTopWidget</zorder>
-  <zorder>pushButton</zorder>
-  <zorder>pushButton_2</zorder>
+  <zorder>search_for</zorder>
   <zorder>MainWidget</zorder>
+  <zorder>VolumeSlider</zorder>
+  <zorder>nightModeButton</zorder>
  </widget>
  <tabstops>
   <tabstop>retreat</tabstop>

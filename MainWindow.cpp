@@ -4,12 +4,10 @@
 #include <QPoint>
 #include <QVBoxLayout>
 #include <QPushButton>
-#include <QWidget>
 #include <QDebug>
 #include <QMouseEvent>
 #include <QApplication>
 #include <QButtonGroup>
-#include <QTimer>
 #include <memory>
 #include <QSlider>
 #include <QEvent>
@@ -17,16 +15,33 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSettings>
+#include <QPainter>      // 用于绘制图形
+#include <QPixmap>       // 用于处理图像
+#include <QWidget>       // 用于窗口相关的操作
+#include <QPropertyAnimation>  // 用于动画效果
+#include <QTimer>         // 用于定时器功能
+#include <QParallelAnimationGroup>
+#include <QGraphicsOpacityEffect>
+#include <QShortcut>
+#include <QSettings>
 
-#include "src/view/Recommend.h"
-#include "src/tool/CustomScrollArea.h"
-#include "src/tool/Interface.h"
-#include "src/view/Login.h"
-#include "src/view/UserInfo.h"
+#include "src/tool/CustomScrollArea.h" // 滚动功能
+#include "src/tool/Interface.h" // 界面设置
+#include "src/view/Login.h" // 登录界面
+#include "src/view/SearchFor.h" // 搜索界面
+#include "src/view/PlayList.h"  // 播放列表
+#include "src/view/PersonalInformation.h" // 个人信息设置
+#include "src/view/UserInfo.h" // 用户信息界面
+
+#include "src/view/Recommend.h" // 推荐界面
+#include "src/view/Download.h" // 下载管理界面
+#include "src/view/RecentlyPlayed.h" // 最近播放（历史记录）
+#include "src/view/Setup.h" // 设置界面
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MainWindow)
+    , player(new Player(this))
 {
     ui->setupUi(this);
 
@@ -36,8 +51,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     setWindowFlags (Qt::CustomizeWindowHint);//两个函数都可以去掉标题栏，区别是这个可以鼠标缩放窗口
     // setWindowFlags (Qt::FramelessWindowHint);
-     // 连接信号和槽
 
+    // 连接信号和槽
     connect(ui->recommend, &QPushButton::clicked, this, [this]() { onButtonClicked(ui->recommend); });
     connect(ui->selected, &QPushButton::clicked, this, [this]() { onButtonClicked(ui->selected); });
     connect(ui->podcast, &QPushButton::clicked, this, [this]() { onButtonClicked(ui->podcast); });
@@ -50,6 +65,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->LocalMusic, &QPushButton::clicked, this, [this]() { onButtonClicked(ui->LocalMusic); });
 
         connect(ui->retreat, &QPushButton::clicked, this, &MainWindow::onRetreatClicked);
+        connect(ui->search_for, &QPushButton::clicked, this, &MainWindow::onSearchButtonClicked);
         connect(ui->mail, &QPushButton::clicked, this, &MainWindow::onMailClicked);
         connect(ui->Settings, &QPushButton::clicked, this, &MainWindow::onSettingsClicked);
         connect(ui->skinPeeler, &QPushButton::clicked, this, &MainWindow::onSkinPeelerClicked);
@@ -57,11 +73,32 @@ MainWindow::MainWindow(QWidget *parent)
         connect(ui->maximize, &QPushButton::clicked, this, &MainWindow::onMaximizeClicked);
         connect(ui->close, &QPushButton::clicked, this, &MainWindow::onCloseClicked);
 
+        connect(ui->PlayList, &QPushButton::clicked, this, &MainWindow::onPlayListClicked);
+
         startScrollingText(ui->vipText, "仅需￥5/月 学生专享价");
-        startScrollingText(ui->SongInformation, "如果爱忘了（live）-  汪苏泷/单依纯");
+
+
+
+        // 连接夜间模式按钮的信号
+        connect(ui->nightModeButton, &QPushButton::clicked, this, &MainWindow::toggleNightMode);
 
         this->login();
         this->setupRecommendWindow();
+        // this->toggleNightMode(); // 默认白天模式
+        // this->setupPlayer("SPACE", "LEFT", "RIGHT", "UP", "DOWN"); // 启动播放器
+        this->loadSettings(); //在程序启动时加载保存的设置
+        QSettings settings("MyCompany", "MyApp");
+        // 加载快捷键设置
+        QString playPauseShortcut = settings.value("playPauseShortcut").toString();
+        QString prevSongShortcut = settings.value("prevSongShortcut").toString();
+        QString nextSongShortcut = settings.value("nextSongShortcut").toString();
+        QString volumeUpShortcut = settings.value("volumeUpShortcut").toString();
+        QString volumeDownShortcut = settings.value("volumeDownShortcut").toString();
+        this->setupPlayer(playPauseShortcut,
+                         prevSongShortcut,
+                         nextSongShortcut,
+                         volumeUpShortcut,
+                         volumeDownShortcut); // 加载快捷键
 }
 
 MainWindow::~MainWindow()
@@ -69,9 +106,458 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+// 执行保存的设置
+void MainWindow::saveSettings(bool enableTimerClose,
+                                      int hour,
+                                      int minute,
+                                      QString theme,
+                                      bool timedShutdown,
+                                      bool autoPlay,
+                                      QString soundEffect)
+{
+    qDebug() << "接收保存的设置："
+             << "定时关闭：" << enableTimerClose
+             << "小时：" << hour
+             << "分钟：" << minute
+             << "主题：" << theme
+             << "关闭软件后关机：" << timedShutdown
+             << "自动播放：" << autoPlay
+             << "音效：" << soundEffect;
+
+    // 保存设置到 QSettings
+    QSettings settings("MyCompany", "MyApp");
+
+    // 保存定时关闭设置
+    settings.setValue("settings/timerEnable", enableTimerClose);
+    settings.setValue("settings/timerHour", hour);
+    settings.setValue("settings/timerMinute", minute);
+
+    // 保存主题设置
+    settings.setValue("settings/themeMode", theme);
+
+    // 保存关闭软件后关机设置
+    settings.setValue("settings/timedShutdown", timedShutdown);
+
+    // 保存自动播放设置
+    settings.setValue("settings/autoPlay", autoPlay);
+
+    // 保存音效设置
+    settings.setValue("settings/soundEffect", soundEffect);
+
+    this->loadSettings();
+}
+
+void MainWindow::loadSettings()
+{
+    QSettings settings("MyCompany", "MyApp");
+
+    bool enableTimerClose = settings.value("settings/timerEnable", false).toBool();
+    int hour = settings.value("settings/timerHour", 0).toInt();
+    int minute = settings.value("settings/timerMinute", 0).toInt();
+    QString theme = settings.value("settings/themeMode", "默认主题").toString();
+    bool timedShutdown = settings.value("settings/timedShutdown", false).toBool();
+    bool autoPlay = settings.value("settings/autoPlay", false).toBool();
+    QString soundEffect = settings.value("settings/soundEffect", "默认音效").toString();
+
+    qDebug() << "加载保存的设置："
+             << "定时关闭：" << enableTimerClose
+             << "小时：" << hour
+             << "分钟：" << minute
+             << "主题：" << theme
+             << "自动播放：" << autoPlay
+             << "关闭软件后关机：" << timedShutdown
+             << "音效：" << soundEffect;
+
+    qDebug() << "设置已加载！";
+
+    // 更新主窗口的状态
+    // 例如：
+    if (theme == "白色主题") {
+        // 白色主题
+        QString dayStyle = R"(
+    QWidget {
+        background-color: rgb(247, 249, 252);
+        color: black;
+    }
+
+        QListView {
+            border: none;
+        }
+
+        QListView::item {
+            height: 75px;
+            border: none; /* 无边框 */
+            border-radius: 20px; /* 圆角效果 */
+            padding: 10px;
+            font-size: 16px; /* 字体大小 */
+        }
+
+        QListView::item:selected {
+            background-color: rgb(255, 255, 255); /* 选中项背景色 */
+        }
+
+        QListView::item:hover {
+            background-color: rgb(255, 255, 255); /* 悬浮项背景色 */
+        }
+    )";
+        this->setStyleSheet(dayStyle);
+        ui->LeftWidget->setStyleSheet("background-color: rgb(240, 243, 246);");
+        ui->Theme->setStyleSheet("background-image: url(:/new/prefix1/log.png);");
+        isNightMode = false;
+    } else if (theme == "黑色主题") {
+        // 黑色主题
+        QString nightStyle = R"(
+    QWidget {
+        background-color: #3a3f44;
+        color: white;
+    }
+        QListView {
+            border: none;
+            color: white;
+        }
+        QListView::item {
+            color: white;
+            height: 75px;
+            border: none; /* 无边框 */
+            border-radius: 20px; /* 圆角效果 */
+            padding: 10px;
+            font-size: 16px; /* 字体大小 */
+
+        }
+        QListView::item:selected {
+            background-color: rgb(119,136,153); /* 选中项背景色 */
+            color: white;  /* 选中项字体颜色 */
+        }
+
+        QListView::item:hover {
+            background-color: rgb(119,136,153); /* 悬浮项背景色 */
+        }
+    )";
+        this->setStyleSheet(nightStyle);
+        ui->LeftWidget->setStyleSheet("background-color: #3a3f44");
+        ui->Theme->setStyleSheet("background-image: url(:/new/prefix1/log-night.png);");
+        isNightMode = true;
+    }
+
+    qDebug() << "设置已加载！";
+}
+
+// 启动播放器
+void MainWindow::setupPlayer(const QString &playPauseShortcut,
+                             const QString &prevSongShortcut,
+                             const QString &nextSongShortcut,
+                             const QString &volumeUpShortcut,
+                             const QString &volumeDownShortcut)
+{
+
+    // 打印快捷键信息在一行中
+    qDebug() << QString("快捷键配置：播放/暂停：%1，上一首：%2，下一首：%3，音量增加：%4，音量减小：%5")
+                    .arg(playPauseShortcut)
+                    .arg(prevSongShortcut)
+                    .arg(nextSongShortcut)
+                    .arg(volumeUpShortcut)
+                    .arg(volumeDownShortcut);
+    // 保存设置到 QSettings
+    QSettings settings("MyCompany", "MyApp");
+    settings.setValue("playPauseShortcut", playPauseShortcut);
+    settings.setValue("prevSongShortcut", prevSongShortcut);
+    settings.setValue("nextSongShortcut", nextSongShortcut);
+    settings.setValue("volumeUpShortcut", volumeUpShortcut);
+    settings.setValue("volumeDownShortcut", volumeDownShortcut);
+
+    // 连接按钮的点击信号到相应的槽函数
+    connect(ui->PlayOrPause, &QPushButton::clicked, this, &MainWindow::onPlayOrPauseClicked);
+    connect(ui->like, &QPushButton::clicked, this, &MainWindow::onLikeClicked);
+    connect(ui->PreviousSong, &QPushButton::clicked, this, &MainWindow::onPreviousSongClicked);
+    connect(ui->NextSong, &QPushButton::clicked, this, &MainWindow::onNextSongClicked);
+    connect(ui->ListLoop, &QPushButton::clicked, this, &MainWindow::onListLoopClicked);
+
+    player = new Player();
+    // 连接歌曲信息的信号
+    connect(player, &Player::currentSongChanged, this, &MainWindow::onSongLoaded);
+    ui->SongInformation->setText("断掉了的爱");
+
+    player->loadMusicFromDatabase(); //加载列表音乐
+
+    // 连接滑块的信号到相应的槽函数
+    connect(ui->slider, &QSlider::valueChanged, this, &MainWindow::onProgressSliderValueChanged);
+    connect(player, &Player::positionChanged, this, &MainWindow::updatePositionDisplay);// 连接当前播放时长的信号
+    connect(player, &Player::durationChanged, this, &MainWindow::setSliderRange); // 设置滑块范围
+
+    ui->slider->setOrientation(Qt::Horizontal);
+    ui->slider->setTickPosition(QSlider::TicksBelow);
+    ui->slider->setTickInterval(1000);  // 每秒一个刻度
+
+    // 启动定时器，定期更新滑块
+    QTimer *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &MainWindow::updateProgressSlider);
+    timer->start(5000);  // 每秒更新一次滑块位置
+
+    // 初始化滑块位置和可见性
+    ui->VolumeSlider->hide();
+    ui->VolumeSlider->setValue(50); // 默认音量
+    player->setVolume(50); // 默认音量
+
+    // 连接滑块值变化信号到槽
+    connect(ui->VolumeSlider, &QSlider::valueChanged, this, &MainWindow::onVolumeSliderValueChanged);
+
+    // 设置按钮和滑块的悬停事件
+    ui->VolumeControl->installEventFilter(this);
+    ui->VolumeSlider->installEventFilter(this);
+
+    // 连接音量按钮的静音事件
+    connect(ui->VolumeControl, &QPushButton::clicked, this, &MainWindow::onVolumeControlClicked);
+
+    ffmpegWorker = new FfmpegWorker();
+
+    // 播放/暂停
+    QShortcut *getPlayPauseShortcut = new QShortcut(QKeySequence(playPauseShortcut), this);
+    connect(getPlayPauseShortcut, &QShortcut::activated, this, &MainWindow::onPlayOrPauseClicked); // 或者 &Player::pause 根据需求
+
+    // 上一首
+    QShortcut *getPrevSongShortcut = new QShortcut(QKeySequence(prevSongShortcut), this);
+    connect(getPrevSongShortcut, &QShortcut::activated, this, &MainWindow::onPreviousSongClicked);
+
+    // 下一首
+    QShortcut *getNextSongShortcut = new QShortcut(QKeySequence(nextSongShortcut), this);
+    connect(getNextSongShortcut, &QShortcut::activated, this, &MainWindow::onNextSongClicked);
+
+    // 音量增加
+    QShortcut *getVolumeUpShortcut = new QShortcut(QKeySequence(volumeUpShortcut), this);
+    connect(getVolumeUpShortcut, &QShortcut::activated, this, [this]() {
+        // 获取当前音量
+        int currentVolume = ui->VolumeSlider->value();
+        // 增加音量
+        currentVolume += 5;
+        // 限制音量范围
+        if (currentVolume > 100) currentVolume = 100;
+        // 更新音量条
+        ui->VolumeSlider->setValue(currentVolume);
+    });
+
+    // 音量减小
+    QShortcut *getVolumeDownShortcut = new QShortcut(QKeySequence(volumeDownShortcut), this);
+    connect(getVolumeDownShortcut, &QShortcut::activated, this, [this]() {
+        // 获取当前音量
+        int currentVolume = ui->VolumeSlider->value();
+        // 减少音量
+        currentVolume -= 5;
+        // 限制音量范围
+        if (currentVolume < 0) currentVolume = 0;
+        // 更新音量条
+        ui->VolumeSlider->setValue(currentVolume);
+    });
+}
+
+void MainWindow::toggleNightMode()
+{
+    // 白天模式样式
+    QString dayStyle = R"(
+    QWidget {
+        background-color: rgb(247, 249, 252);
+        color: black;
+    }
+
+        QListView {
+            border: none;
+        }
+
+        QListView::item {
+            height: 75px;
+            border: none; /* 无边框 */
+            border-radius: 20px; /* 圆角效果 */
+            padding: 10px;
+            font-size: 16px; /* 字体大小 */
+        }
+
+        QListView::item:selected {
+            background-color: rgb(255, 255, 255); /* 选中项背景色 */
+        }
+
+        QListView::item:hover {
+            background-color: rgb(255, 255, 255); /* 悬浮项背景色 */
+        }
+    )";
+
+    // 夜间模式样式
+    QString nightStyle = R"(
+    QWidget {
+        background-color: #3a3f44;
+        color: white;
+    }
+        QListView {
+            border: none;
+            color: white;
+        }
+        QListView::item {
+            color: white;
+            height: 75px;
+            border: none; /* 无边框 */
+            border-radius: 20px; /* 圆角效果 */
+            padding: 10px;
+            font-size: 16px; /* 字体大小 */
+
+        }
+        QListView::item:selected {
+            background-color: rgb(119,136,153); /* 选中项背景色 */
+            color: white;  /* 选中项字体颜色 */
+        }
+
+        QListView::item:hover {
+            background-color: rgb(119,136,153); /* 悬浮项背景色 */
+        }
+    )";
+
+    if (isNightMode) {
+        // 切换到白天模式
+        this->setStyleSheet(dayStyle);
+        ui->LeftWidget->setStyleSheet("background-color: rgb(240, 243, 246);");
+        ui->Theme->setStyleSheet("background-image: url(:/new/prefix1/log.png);");
+        isNightMode = false;
+    } else {
+        // 切换到夜间模式
+        this->setStyleSheet(nightStyle);
+        ui->LeftWidget->setStyleSheet("background-color: #3a3f44");
+        ui->Theme->setStyleSheet("background-image: url(:/new/prefix1/log-night.png);");
+        isNightMode = true;
+    }
+}
+
+void MainWindow::clearLayoutAndWidgets(QWidget *widget)
+{
+    if (widget->layout()) {
+        QLayout *layout = widget->layout();
+        QLayoutItem *item;
+        while ((item = layout->takeAt(0)) != nullptr) {
+            if (item->widget()) {
+                delete item->widget();
+            }
+            delete item;
+        }
+        delete layout;
+        widget->setLayout(nullptr); // 清除布局
+    }
+}
+
+void MainWindow::onPersonalInfoSettings()
+{
+    qDebug("接收到个人信息设置按钮点击信号");
+
+    // 删除现有的布局和所有子控件
+    clearLayoutAndWidgets(ui->MainWidget);
+
+    PersonalInformation *personalInformation = PersonalInformation::getInstance(ui->MainWidget);
+    // 设置窗口的最小高度
+    personalInformation->setMinimumHeight(personalInformation->height());
+
+    personalInformation->show();
+
+    personalInformation->loadingPersonalInformation();
+
+    connect(personalInformation, &PersonalInformation::personalInformationChanged, this, [this] {
+        // 更新用户名
+        login();
+        // 在这里可以使用newUsername进行进一步操作
+        // 例如，更新MainWindow中的某些显示或状态
+    });
+
+}
+
+void MainWindow::onVolumeControlClicked()
+{
+    if (!isPressed) {
+        // 设置音量为0，实现静音
+        player->setVolume(0);
+        // 切换到按下状态的背景图片
+        ui->VolumeControl->setStyleSheet("QPushButton { image: url(:/new/prefix1/mute.png); border: none; }");
+        isPressed = true;
+        qDebug() << "按钮切换到静音状态";
+    } else {
+        // 恢复上一次的音量
+        player->setVolume(lastVolume);
+        // 切换回正常状态的背景图片
+        ui->VolumeControl->setStyleSheet("QPushButton { image: url(:/new/prefix1/VolumeControl.png); border: none; }");
+        isPressed = false;
+        qDebug() << "按钮切换回正常状态";
+    }
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == ui->VolumeControl) {
+        if (event->type() == QEvent::HoverEnter) {
+            // 显示滑块
+            QPoint buttonPosInMainWindow = ui->VolumeControl->mapTo(this, QPoint(0, 0));
+            QPoint sliderPos(buttonPosInMainWindow.x(), buttonPosInMainWindow.y() - ui->VolumeSlider->height());
+            ui->VolumeSlider->move(sliderPos);
+            ui->VolumeSlider->show();
+        }
+        else if (event->type() == QEvent::HoverLeave) {
+            // 延迟隐藏滑块
+            QTimer::singleShot(100, this, [this]() {
+                if (!ui->VolumeSlider->underMouse()) {
+                    ui->VolumeSlider->hide();
+                }
+            });
+        }
+    }
+    else if (obj == ui->VolumeSlider) {
+        if (event->type() == QEvent::HoverLeave) {
+            // 延迟隐藏滑块
+            QTimer::singleShot(100, this, [this]() {
+                if (!ui->VolumeControl->underMouse()) {
+                    ui->VolumeSlider->hide();
+                }
+            });
+        }
+    }
+    return QWidget::eventFilter(obj, event);
+}
+
+// 实现音量调节的槽函数
+void MainWindow::onVolumeSliderValueChanged(int value)
+{
+    // 设置播放器的音量
+    qDebug() << "当前音量值:" << value;
+    lastVolume = value;
+    player->setVolume(value);
+}
+
+void MainWindow::setSliderRange(qint64 duration)
+{
+    ui->slider->setRange(0, static_cast<int>(duration)); // 设置滑块范围
+}
+
+void MainWindow::updatePositionDisplay(int position)
+{
+    // 将毫秒转换为分钟和秒
+    int minutes = position / 60000;
+    int seconds = (position % 60000) / 1000;
+
+    // 格式化字符串，例如 "3:45"
+    QString durationText = QString("%1:%2").arg(minutes).arg(seconds, 2, 10, QLatin1Char('0'));
+
+    // 更新 QLabel 的文本
+    ui->Play_duration->setText(durationText);
+}
+
+void MainWindow::onSongLoaded(const QString &songName)
+{
+    // 假设 mainWindow 中有一个 FfmpegWorker 类型的成员变量 ffmpegWorker
+    // 如果没有，你需要创建一个或者以其他方式获取到 FfmpegWorker 的实例
+    Song song = ffmpegWorker->findSongBySongPath(songName);
+
+    // 设置 QLabel 的文本
+    ui->SongInformation->setText(song.songName); // 连接切换的歌曲名字
+    ui->duration->setText(song.duration);
+    ui->duration->setStyleSheet("QLabel {font-size: 14px; border: none; font-family: '微软雅黑';}");
+    ui->Play_duration->setStyleSheet("QLabel {font-size: 14px; border: none; font-family: '微软雅黑';}");
+}
+
 void MainWindow::setupRecommendWindow()
 {
-    // 创建 Recommend 窗口实例
+    // 删除现有的布局和所有子控件
+    clearLayoutAndWidgets(ui->MainWidget);
+    // 在主窗口中设置推荐窗口的滚动区域
     Recommend *recommend = new Recommend(this);
 
     // 设置推荐窗口的最小高度
@@ -79,61 +565,26 @@ void MainWindow::setupRecommendWindow()
 
     // 创建自定义的 CustomScrollArea 实例
     CustomScrollArea *scrollArea = new CustomScrollArea(ui->MainWidget);
-    scrollArea->setWidget(recommend);  // 将 Recommend 窗口放入滚动区域
+    scrollArea->setWidget(recommend);
     scrollArea->setWidgetResizable(true);  // 允许内容自适应滚动区域大小
 
-    // 设置水平滚动条策略为隐藏
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // 设置是否自动隐藏滚动条
+    scrollArea->setAutoHideScrollBar(true);  // 自动隐藏滚动条
 
-    // 移除 CustomScrollArea 的边框
-    scrollArea->setStyleSheet(
-        "QScrollArea {"
-        "   border: none;"  // 禁用边框
-        "}"
-        "QScrollBar:vertical {"
-        "   border: none;"
-        "   background: transparent;"  // 设置滚动条背景为透明
-        "   width: 10px;"              // 滚动条宽度
-        "   margin: 20px 0 20px 0;"    // 滚动条上下边距
-        "   padding-right: 3px;"       // 滑块右边距
-        "}"
-        "QScrollBar::handle:vertical {"
-        "   background: rgb(226, 229, 233);" // 滚动条滑块颜色
-        "   border-radius: 3px;"             // 滚动条滑块圆角
-        "   min-height: 20px;"               // 滚动条滑块最小高度
-        "}"
-        "QScrollBar::handle:vertical:hover {"
-        "   background: rgb(195, 200, 207);" // 滚动条滑块悬停颜色
-        "}"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
-        "   background: none;"               // 上下按钮背景色
-        "   border: none;"                   // 上下按钮边框
-        "   width: 0px;"                     // 上下按钮宽度
-        "   height: 0px;"                    // 上下按钮高度
-        "}"
-        "QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {"
-        "   background: none;"               // 上下箭头背景色
-        "   border: none;"                   // 上下箭头边框
-        "}"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {"
-        "   background: none;"               // 页面背景色
-        "}"
-        );
-
-    // 移除父控件的边框
-    ui->MainWidget->setStyleSheet("border: none;");
-
-    // 移除 Recommend 的边框
-    recommend->setStyleSheet("border: none;");
+    // 清除现有的布局（如果已经存在）
+    if (ui->MainWidget->layout()) {
+        delete ui->MainWidget->layout();  // 删除原布局
+    }
 
     // 创建并设置布局
     QVBoxLayout *layout = new QVBoxLayout(ui->MainWidget);
-    layout->addWidget(scrollArea);  // 将滚动区域添加到布局中
+    layout->addWidget(scrollArea);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
     // 确保推荐窗口的尺寸被正确调整
     recommend->adjustSize();
+
 }
 
 void MainWindow::login()
@@ -205,6 +656,14 @@ void MainWindow::setupButton(QPushButton *button, const QString &text)
 
             userInfoWindow->move(x, y);// 设置用户信息窗口的位置
             userInfoWindow->show();// 显示用户信息窗口
+
+            connect(userInfoWindow, &UserInfo::PersonalInformationSettings, this, &MainWindow::onPersonalInfoSettings);
+            // 连接用户信息窗口销毁时的信号
+            connect(userInfoWindow, &QObject::destroyed, this, [this]() {
+                qDebug() << "用户信息窗口已销毁，用户名：";
+                ui->username->setText("登录");
+                // this->login();  // 或者其他你想执行的操作
+            });
         }
     });
 
@@ -444,15 +903,15 @@ void MainWindow::setupUI() {
 
     setButtonStyle(ui->like, "喜欢", ":/new/prefix1/like.png");
     setButtonStyle(ui->PreviousSong, "上一首", ":/new/prefix1/PreviousSong.png");
-    setButtonStyle(ui->pause, "暂停", ":/new/prefix1/pause.png");
+    // setButtonStyle(ui->PlayOrPause, "播放", ":/new/prefix1/play.png");
     setButtonStyle(ui->NextSong, "下一首", ":/new/prefix1/NextSong.png");
     setButtonStyle(ui->ListLoop, "列表循环", ":/new/prefix1/ListLoop.png");
 
     setButtonStyle(ui->DesktopLyrics, "桌面歌词", ":/new/prefix1/DesktopLyrics.png");
     setButtonStyle(ui->LetIsStartListeningTogether, "会员音效", ":/new/prefix1/LetIsStartListeningTogether.png");
     setButtonStyle(ui->MemberSoundEffects, "开始一起听", ":/new/prefix1/MemberSoundEffects.png");
-    setButtonStyle(ui->PlayList, "音量调节", ":/new/prefix1/PlayList.png");
-    setButtonStyle(ui->VolumeControl, "播放列表", ":/new/prefix1/VolumeControl.png");
+    setButtonStyle(ui->VolumeControl, "音量调节", ":/new/prefix1/VolumeControl.png");
+    setButtonStyle(ui->PlayList, "播放列表", ":/new/prefix1/PlayList.png");
 }
 
 // 按钮点击事件的槽函数
@@ -461,6 +920,7 @@ void MainWindow::onRecommendClicked()
 {
     qDebug() << "推荐按钮点击事件";
     // 处理“推荐”按钮点击事件
+    this->setupRecommendWindow();
 }
 
 void MainWindow::onSelectedClicked()
@@ -497,6 +957,36 @@ void MainWindow::onRecentlyPlayedClicked()
 {
     qDebug() << "最近播放按钮点击事件";
     // 处理“最近播放”按钮点击事件
+
+    RecentlyPlayed *recentlyPlayed = new RecentlyPlayed(this);
+
+
+    // 设置窗口的最小高度
+    recentlyPlayed->setMinimumHeight(recentlyPlayed->height());
+
+    // 创建自定义的 CustomScrollArea 实例
+    CustomScrollArea *scrollArea = new CustomScrollArea(ui->MainWidget);
+    scrollArea->setWidget(recentlyPlayed);
+    scrollArea->setWidgetResizable(true);  // 允许内容自适应滚动区域大小
+
+    // 设置是否自动隐藏滚动条
+    scrollArea->setAutoHideScrollBar(true);  // 自动隐藏滚动条
+
+    // 清除现有的布局（如果已经存在）
+    if (ui->MainWidget->layout()) {
+        delete ui->MainWidget->layout();  // 删除原布局
+    }
+
+    // 创建并设置新的布局
+    QVBoxLayout *layout = new QVBoxLayout(ui->MainWidget);
+    layout->addWidget(scrollArea);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    // 确保推荐窗口的尺寸被正确调整
+    recentlyPlayed->adjustSize();
+
+
 }
 
 void MainWindow::onCollectClicked()
@@ -509,6 +999,38 @@ void MainWindow::onDownloadClicked()
 {
     qDebug() << "下载管理按钮点击事件";
     // 处理“下载管理”按钮点击事件
+
+    Download *download = new Download(this);
+
+    // 加载本地音乐文件
+    // download->performDatabaseQuery(ui->search->text());
+
+    // 设置窗口的最小高度
+    download->setMinimumHeight(download->height());
+
+    // 创建自定义的 CustomScrollArea 实例
+    CustomScrollArea *scrollArea = new CustomScrollArea(ui->MainWidget);
+    scrollArea->setWidget(download);
+    scrollArea->setWidgetResizable(true);  // 允许内容自适应滚动区域大小
+
+    // 设置是否自动隐藏滚动条
+    scrollArea->setAutoHideScrollBar(true);  // 自动隐藏滚动条
+
+    // 清除现有的布局（如果已经存在）
+    if (ui->MainWidget->layout()) {
+        delete ui->MainWidget->layout();  // 删除原布局
+    }
+
+    // 创建并设置新的布局
+    QVBoxLayout *layout = new QVBoxLayout(ui->MainWidget);
+    layout->addWidget(scrollArea);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    // 确保推荐窗口的尺寸被正确调整
+    download->adjustSize();
+
+
 }
 
 void MainWindow::onLocalMusicClicked()
@@ -521,7 +1043,48 @@ void MainWindow::onRetreatClicked()
 {
     // 返回按钮点击时的行为
     qDebug() << "Return button clicked!";
+
+    onButtonClicked(ui->recommend);
+
 }
+
+// 搜索按钮点击的槽函数
+void MainWindow::onSearchButtonClicked()
+{
+    qDebug() << "搜索：";
+
+    // 在主窗口中设置推荐窗口的滚动区域
+    SearchFor *searchFor = new SearchFor(this);
+
+    // 发送查询数据
+    searchFor->performDatabaseQuery(ui->search->text());
+
+    // 设置窗口的最小高度
+    searchFor->setMinimumHeight(searchFor->height());
+
+    // 创建自定义的 CustomScrollArea 实例
+    CustomScrollArea *scrollArea = new CustomScrollArea(ui->MainWidget);
+    scrollArea->setWidget(searchFor);
+    scrollArea->setWidgetResizable(true);  // 允许内容自适应滚动区域大小
+
+    // 设置是否自动隐藏滚动条
+    scrollArea->setAutoHideScrollBar(true);  // 自动隐藏滚动条
+
+    // 清除现有的布局（如果已经存在）
+    if (ui->MainWidget->layout()) {
+        delete ui->MainWidget->layout();  // 删除原布局
+    }
+
+    // 创建并设置新的布局
+    QVBoxLayout *layout = new QVBoxLayout(ui->MainWidget);
+    layout->addWidget(scrollArea);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    // 确保推荐窗口的尺寸被正确调整
+    searchFor->adjustSize();
+}
+
 
 void MainWindow::onMailClicked()
 {
@@ -533,6 +1096,38 @@ void MainWindow::onSettingsClicked()
 {
     // 设置按钮点击时的行为
     qDebug() << "Settings button clicked!";
+
+    Setup *setup = new Setup(this);
+
+    // 设置窗口的最小高度
+    setup->setMinimumHeight(setup->height());
+
+    // 创建自定义的 CustomScrollArea 实例
+    CustomScrollArea *scrollArea = new CustomScrollArea(ui->MainWidget);
+    scrollArea->setWidget(setup);
+    scrollArea->setWidgetResizable(true);  // 允许内容自适应滚动区域大小
+
+    // 设置是否自动隐藏滚动条
+    scrollArea->setAutoHideScrollBar(true);  // 自动隐藏滚动条
+
+    // 清除现有的布局（如果已经存在）
+    if (ui->MainWidget->layout()) {
+        delete ui->MainWidget->layout();  // 删除原布局
+    }
+
+    // 创建并设置新的布局
+    QVBoxLayout *layout = new QVBoxLayout(ui->MainWidget);
+    layout->addWidget(scrollArea);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    // 确保推荐窗口的尺寸被正确调整
+    setup->adjustSize();
+
+    connect(setup, &Setup::shortcutUpdated,
+            this, &MainWindow::setupPlayer); // 接收快捷键设置
+    connect(setup, &Setup::settingsUpdated, this, &MainWindow::saveSettings);
+
 }
 
 void MainWindow::onSkinPeelerClicked()
@@ -576,4 +1171,128 @@ void MainWindow::onCloseClicked()
     // 关闭按钮点击时的行为
     qDebug() << "Close button clicked!";
     close();  // 关闭窗口
+}
+
+void MainWindow::onLikeClicked()
+{
+    // 切换喜欢状态
+    static bool isLiked = false;
+
+    if (isLiked) {
+        // 取消喜欢
+        ui->like->setStyleSheet("image: url(:/new/prefix1/like.png); border: none;");
+        isLiked = false;
+    } else {
+        // 添加喜欢
+        ui->like->setStyleSheet("image: url(:/new/prefix1/liked.png); border: none;");
+        isLiked = true;
+    }
+
+    // 更新数据库或状态
+}
+
+void MainWindow::onPreviousSongClicked()
+{
+    if (!player->getPlaylist().isEmpty()) {
+        player->previous();
+        ui->PlayOrPause->setStyleSheet("image: url(:/new/prefix1/pause.png); border: none;");
+    } else {
+        // 显示提示信息或处理空播放列表的情况
+        qDebug() << "播放列表为空";
+    }
+}
+
+void MainWindow::onPlayOrPauseClicked()
+{
+    if (player->getState() == QMediaPlayer::PlayingState) {
+         qDebug() << "暂停播放";
+        player->pause();
+        ui->PlayOrPause->setStyleSheet("image: url(:/new/prefix1/play.png); border: none;");
+    } else {
+         qDebug() << "开始播放";
+        player->play();
+        ui->PlayOrPause->setStyleSheet("image: url(:/new/prefix1/pause.png); border: none;");
+    }
+}
+
+void MainWindow::onNextSongClicked()
+{
+    if (!player->getPlaylist().isEmpty()) {
+        player->next();
+        ui->PlayOrPause->setStyleSheet("image: url(:/new/prefix1/pause.png); border: none;");
+    } else {
+        // 显示提示信息或处理空播放列表的情况
+        qDebug() << "播放列表为空";
+    }
+}
+
+// 循环方式
+void MainWindow::onListLoopClicked()
+{
+    static int loopMode = 0; // 0: 无循环, 1: 单曲循环, 2: 列表循环
+
+    loopMode = (loopMode + 1) % 3;
+
+    switch (loopMode) {
+    case 0:
+        // 无循环
+        ui->ListLoop->setStyleSheet("image: url(:/new/prefix1/NoLoop.png); border: none;");
+        break;
+    case 1:
+        // 单曲循环
+        ui->ListLoop->setStyleSheet("image: url(:/new/prefix1/SingleLoop.png); border: none;");
+        break;
+    case 2:
+        // 列表循环
+        ui->ListLoop->setStyleSheet("image: url(:/new/prefix1/ListLoop.png); border: none;");
+        break;
+    }
+
+    // 更新播放模式
+}
+
+void MainWindow::onProgressSliderValueChanged(int value)
+{
+    // 当用户拖动滑块时，更新播放位置
+    // player.setPosition(value);
+    player->setPosition(value);
+}
+
+void MainWindow::updateProgressSlider()
+{
+    // 获取当前播放位置
+    int position = player->getCurrentPosition();
+    // 更新滑块位置
+    ui->slider->setValue(position);
+}
+
+// 播放列表按钮点击时的行为
+void MainWindow::onPlayListClicked()
+{
+    static bool open = false;  // 确保 open 状态正确，初始化为 false
+
+    // 获取 PlayList 实例
+    PlayList* playList = PlayList::getInstance();
+    if (!playList) {
+        qDebug() << "PlayList is null!";
+        return;
+    }
+
+    if (!open) {
+        // 获取主窗口的位置和大小
+        QRect mainWindowGeometry = this->geometry();
+        int x = mainWindowGeometry.right();  // 主窗口的右边界
+        int y = mainWindowGeometry.top();   // 主窗口的上边界
+
+        // 确保窗口在主窗口右下方的位置打开
+        playList->move(x - playList->width(), y + 100);
+        playList->show();  // 显示窗口
+        qDebug() << "PlayList window opened.";
+    } else {
+        playList->close();  // 关闭窗口
+        qDebug() << "PlayList window closed.";
+    }
+
+    // 切换 open 状态
+    open = !open;
 }

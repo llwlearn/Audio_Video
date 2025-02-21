@@ -19,10 +19,25 @@ public:
 
     static PurchaseMembership* getInstance(QWidget *parent = nullptr);  // 获取单例的静态方法
 
+private slots:
+    void onAnnualMembershipClicked();
+    void onMonthlyMembershipClicked();
+    void onQuarterlyMembershipClicked();
+    void onPurchaseClicked();
 
 private:
     Ui::PurchaseMembership *ui;
     EventFilter *filter;  // 存储过滤器对象的指针
+    enum MembershipType {
+        None = -1,  // 添加一个None值作为默认值
+        Annual,
+        Monthly,
+        Quarterly
+    };
+    MembershipType selectedMembershipType; // 当前选中的会员类型
+
+    QString unselectedStyle; // 未选中样式
+    QString selectedStyle;   // 选中样式
 };
 
 #endif // PURCHASEMEMBERSHIP_H

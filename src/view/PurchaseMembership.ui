@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QPushButton" name="pushButton">
+  <widget class="QPushButton" name="MonthlyMembership">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -22,11 +22,14 @@
      <height>171</height>
     </rect>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: lightgray;</string>
+   </property>
    <property name="text">
-    <string>月度会员</string>
+    <string>月度会员(100￥)</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="QuarterlyMembership">
    <property name="geometry">
     <rect>
      <x>170</x>
@@ -35,11 +38,14 @@
      <height>171</height>
     </rect>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: lightgray;</string>
+   </property>
    <property name="text">
-    <string>季度会员</string>
+    <string>季度会员(300￥)</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_3">
+  <widget class="QPushButton" name="AnnualMembership">
    <property name="geometry">
     <rect>
      <x>330</x>
@@ -48,11 +54,14 @@
      <height>171</height>
     </rect>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: lightgray;</string>
+   </property>
    <property name="text">
-    <string>年度会员</string>
+    <string>年度会员(1200￥)</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_4">
+  <widget class="QPushButton" name="purchase">
    <property name="geometry">
     <rect>
      <x>195</x>

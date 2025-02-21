@@ -14,6 +14,8 @@ public:
     Database();
     ~Database();
 
+    static QSqlDatabase getGlobalConnection();
+
     // 连接到数据库
     bool connect(const QString &host, const QString &dbName, const QString &user, const QString &password);
 
@@ -32,8 +34,12 @@ public:
     // 检查数据库连接是否成功
     bool isConnected() const;
 
+    void close();  // 声明 close 方法
+
 private:
     QSqlDatabase db;
+    bool connected = false;
+    static int connectionCounter;  // 静态成员，用于生成唯一的连接名称
 };
 
 #endif // DATABASE_H

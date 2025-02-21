@@ -74,5 +74,8 @@
         <file>recommend/Selected-9.png</file>
         <file>recommend/Selected-10.png</file>
         <file>search_for.png</file>
+        <file>mute.png</file>
+        <file>SinglePlayback.png</file>
+        <file>log-night.png</file>
     </qresource>
 </RCC>

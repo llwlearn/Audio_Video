@@ -553,8 +553,7 @@ padding-top: 2px;</string>
      <string notr="true">border-radius: 12px;  /* 设置圆角 */
     background-image: url(:/new/prefix1/recommend/Selected-2.png);  /* 设置背景图片 */
     background-position: center;  /* 背景图片居中 */
-    background-repeat: no-repeat;  /* 背景图片不重复 */
-    background-size: cover;  /* 背景图片覆盖整个控件，保持填充 */</string>
+    background-repeat: no-repeat;  /* 背景图片不重复 */</string>
     </property>
     <property name="text">
      <string/>
@@ -1056,8 +1055,7 @@ padding-top: 2px;</string>
      <string notr="true">border-radius: 12px;  /* 设置圆角 */
     background-image: url(:/new/prefix1/recommend/Selected-9.png);  /* 设置背景图片 */
     background-position: center;  /* 背景图片居中 */
-    background-repeat: no-repeat;  /* 背景图片不重复 */
-    background-size: cover;  /* 背景图片覆盖整个控件，保持填充 */</string>
+    background-repeat: no-repeat;  /* 背景图片不重复 */</string>
     </property>
     <property name="text">
      <string/>

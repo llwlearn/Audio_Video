@@ -46,12 +46,14 @@ public:
     QPushButton *share;
     QPushButton *download;
     QWidget *CentreDownWidget;
-    QPushButton *pause;
+    QPushButton *PlayOrPause;
     QPushButton *like;
     QPushButton *PreviousSong;
     QPushButton *NextSong;
     QPushButton *ListLoop;
-    QSlider *progressSlider;
+    QSlider *slider;
+    QLabel *duration;
+    QLabel *Play_duration;
     QWidget *RightDownWidget;
     QPushButton *DesktopLyrics;
     QPushButton *MemberSoundEffects;
@@ -71,10 +73,11 @@ public:
     QPushButton *vip;
     QPushButton *vipText;
     QPushButton *Personal_Information;
-    QPushButton *pushButton;
-    QPushButton *pushButton_2;
+    QPushButton *search_for;
     QLineEdit *search;
     QWidget *MainWidget;
+    QSlider *VolumeSlider;
+    QPushButton *nightModeButton;
 
     void setupUi(QWidget *MainWindow)
     {
@@ -198,7 +201,8 @@ public:
         SongInformation = new QPushButton(DownWidget);
         SongInformation->setObjectName("SongInformation");
         SongInformation->setGeometry(QRect(124, 23, 226, 20));
-        SongInformation->setStyleSheet(QString::fromUtf8("border: none;"));
+        SongInformation->setStyleSheet(QString::fromUtf8("border: none;\n"
+"text-align: left;"));
         AddToPlaylist = new QPushButton(DownWidget);
         AddToPlaylist->setObjectName("AddToPlaylist");
         AddToPlaylist->setGeometry(QRect(124, 50, 35, 35));
@@ -226,11 +230,11 @@ public:
         CentreDownWidget = new QWidget(DownWidget);
         CentreDownWidget->setObjectName("CentreDownWidget");
         CentreDownWidget->setGeometry(QRect(442, 0, 474, 100));
-        pause = new QPushButton(CentreDownWidget);
-        pause->setObjectName("pause");
-        pause->setGeometry(QRect(210, 15, 54, 54));
-        pause->setCursor(QCursor(Qt::PointingHandCursor));
-        pause->setStyleSheet(QString::fromUtf8("image: url(:/new/prefix1/pause.png);\n"
+        PlayOrPause = new QPushButton(CentreDownWidget);
+        PlayOrPause->setObjectName("PlayOrPause");
+        PlayOrPause->setGeometry(QRect(210, 15, 54, 54));
+        PlayOrPause->setCursor(QCursor(Qt::PointingHandCursor));
+        PlayOrPause->setStyleSheet(QString::fromUtf8("image: url(:/new/prefix1/play.png);\n"
 "border: none;\n"
 ""));
         like = new QPushButton(CentreDownWidget);
@@ -257,44 +261,57 @@ public:
         ListLoop->setCursor(QCursor(Qt::PointingHandCursor));
         ListLoop->setStyleSheet(QString::fromUtf8("image: url(:/new/prefix1/ListLoop.png);\n"
 "border: none;"));
-        progressSlider = new QSlider(CentreDownWidget);
-        progressSlider->setObjectName("progressSlider");
-        progressSlider->setGeometry(QRect(42, 70, 390, 30));
-        progressSlider->setCursor(QCursor(Qt::PointingHandCursor));
-        progressSlider->setStyleSheet(QString::fromUtf8("QSlider {\n"
+        slider = new QSlider(CentreDownWidget);
+        slider->setObjectName("slider");
+        slider->setGeometry(QRect(42, 70, 390, 30));
+        slider->setCursor(QCursor(Qt::PointingHandCursor));
+        slider->setStyleSheet(QString::fromUtf8("QSlider {\n"
 "    border: none;\n"
 "    margin-left: 8px;\n"
 "    margin-right: 8px;\n"
 "}\n"
 "\n"
-"/* \351\273\230\350\256\244\346\260\264\345\271\263\346\273\221\345\235\227\347\232\204\346\240\267\345\274\217 */\n"
 "QSlider::handle:horizontal {\n"
-"    background: transparent;\n"
+"    background: rgb(255, 255, 255); /* \350\256\276\347\275\256\346\273\221\345\235\227\351\242\234\350\211\262\344\270\272\347\231\275\350\211\262 */\n"
 "    width: 16px;\n"
 "    height: 16px;\n"
 "    margin: -6px 0;\n"
 "    border-radius: 8px;\n"
-"    transition: all 0.3s ease; /* \346\267\273\345\212\240\350\277\207\346\270\241\346\225\210\346\236\234 */\n"
+"    transition: all 0.3s ease;\n"
+"    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5) inset; /* \350\256\276\347\275\256\351\230\264\345\275\261\344\270\272\345\206\205\351\230\264\345\275\261\357\274\214\344\270\273\350\246\201\345\234\250\346\273\221\345\235\227\344\270\213\346\226\271\346\230\276\347\244\272 */\n"
 "}\n"
 "\n"
-"/* \346\202\254\345\201\234\346\227\266\346\260\264\345\271\263\346\273\221\345\235\227\347\232\204\346\240\267\345\274\217 */\n"
 "QSlider::handle:horizontal:hover {\n"
-"    background: rgb(0, 0, 0); /* \346\202\254\345\201\234\346\227\266\346\273\221\345\235\227\351\242\234\350\211\262\345\217\230\344\270\272\351\273\221\350\211\262 */\n"
-"    width: 16px;\n"
-"    height: 16px;\n"
-"    margin: -6px 0;\n"
-"    border-radius: 8px;\n"
-"    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3); /* \346\267\273\345\212\240\351\230"
-                        "\264\345\275\261\346\225\210\346\236\234 */\n"
+"    box-shadow: 0px 6px 8px rgba(0, 0, 0, 0.5) inset; /* \346\202\254\345\201\234\346\227\266\351\230\264\345\275\261\346\225\210\346\236\234\346\233\264\346\230\216\346\230\276 */\n"
 "}\n"
 "\n"
-"/* \346\273\221\350\275\250\347\232\204\346\240\267\345\274\217 */\n"
 "QSlider::groove:horizontal {\n"
-"    background: rgb(242, 107, 130);\n"
+"    background: qlineargradient(spread:pad, x1:"
+                        "0, y1:0, x2:1, y2:0, stop:0 rgb(242, 107, 130), stop:1 rgb(242, 107, 130));\n"
 "    height: 5px;\n"
 "    border-radius: 2px;\n"
+"}\n"
+"\n"
+"QSlider::sub-page:horizontal {\n"
+"    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgb(255, 0, 0), stop:1 rgb(255, 0, 0));\n"
+"    border-radius: 2px;\n"
+"}\n"
+"\n"
+"QSlider::add-page:horizontal {\n"
+"    background: rgb(218, 220, 223); /* \350\256\276\347\275\256\346\273\221\345\235\227\345\217\263\344\276\247\351\203\250\345\210\206\347\232\204\351\242\234\350\211\262 */\n"
+"    border-radius: 2px;\n"
 "}"));
-        progressSlider->setOrientation(Qt::Horizontal);
+        slider->setOrientation(Qt::Horizontal);
+        duration = new QLabel(CentreDownWidget);
+        duration->setObjectName("duration");
+        duration->setGeometry(QRect(430, 77, 36, 16));
+        duration->setStyleSheet(QString::fromUtf8("border: none;\n"
+"font-size: 11px;"));
+        Play_duration = new QLabel(CentreDownWidget);
+        Play_duration->setObjectName("Play_duration");
+        Play_duration->setGeometry(QRect(10, 77, 36, 16));
+        Play_duration->setStyleSheet(QString::fromUtf8("border: none;\n"
+"font-size: 11px;"));
         RightDownWidget = new QWidget(DownWidget);
         RightDownWidget->setObjectName("RightDownWidget");
         RightDownWidget->setGeometry(QRect(1000, 0, 320, 100));
@@ -409,40 +426,39 @@ public:
         Personal_Information->setObjectName("Personal_Information");
         Personal_Information->setGeometry(QRect(250, 35, 19, 19));
         Personal_Information->setStyleSheet(QString::fromUtf8("image: url(:/new/prefix1/Personal_Information.png);"));
-        pushButton = new QPushButton(MainWindow);
-        pushButton->setObjectName("pushButton");
-        pushButton->setGeometry(QRect(350, 22, 58, 44));
-        pushButton->setCursor(QCursor(Qt::PointingHandCursor));
-        pushButton->setStyleSheet(QString::fromUtf8("border: 2px solid rgb(226, 229, 233);\n"
-"border-radius: 10px;\n"
-"border-right: none;\n"
-"border-top-right-radius: none\n"
-""));
-        pushButton_2 = new QPushButton(MainWindow);
-        pushButton_2->setObjectName("pushButton_2");
-        pushButton_2->setGeometry(QRect(683, 22, 44, 44));
-        pushButton_2->setCursor(QCursor(Qt::PointingHandCursor));
-        pushButton_2->setStyleSheet(QString::fromUtf8("border: 2px solid rgb(226, 229, 233);\n"
+        search_for = new QPushButton(MainWindow);
+        search_for->setObjectName("search_for");
+        search_for->setGeometry(QRect(683, 22, 44, 44));
+        search_for->setCursor(QCursor(Qt::PointingHandCursor));
+        search_for->setStyleSheet(QString::fromUtf8("border: 2px solid rgb(226, 229, 233);\n"
 "border-radius: 10px;\n"
 "image: url(:/new/prefix1/search_for.png);"));
         search = new QLineEdit(MainWindow);
         search->setObjectName("search");
-        search->setGeometry(QRect(408, 22, 264, 44));
+        search->setGeometry(QRect(360, 22, 300, 44));
         search->setStyleSheet(QString::fromUtf8("border: 2px solid rgb(226, 229, 233);\n"
-"border-radius: 10px;\n"
-"border-left: none;\n"
-"border-top-left-radius: none"));
+"border-radius: 10px;"));
         MainWidget = new QWidget(MainWindow);
         MainWidget->setObjectName("MainWidget");
         MainWidget->setGeometry(QRect(255, 89, 1065, 751));
+        VolumeSlider = new QSlider(MainWindow);
+        VolumeSlider->setObjectName("VolumeSlider");
+        VolumeSlider->setGeometry(QRect(1200, 710, 40, 160));
+        VolumeSlider->setStyleSheet(QString::fromUtf8(""));
+        VolumeSlider->setOrientation(Qt::Vertical);
+        nightModeButton = new QPushButton(MainWindow);
+        nightModeButton->setObjectName("nightModeButton");
+        nightModeButton->setGeometry(QRect(0, 750, 80, 71));
+        nightModeButton->setCursor(QCursor(Qt::PointingHandCursor));
         search->raise();
         retreat->raise();
         LeftWidget->raise();
         DownWidget->raise();
         RightTopWidget->raise();
-        pushButton->raise();
-        pushButton_2->raise();
+        search_for->raise();
         MainWidget->raise();
+        VolumeSlider->raise();
+        nightModeButton->raise();
         QWidget::setTabOrder(retreat, recommend);
         QWidget::setTabOrder(recommend, selected);
         QWidget::setTabOrder(selected, podcast);
@@ -475,16 +491,18 @@ public:
         myLike->setText(QCoreApplication::translate("MainWindow", "\346\210\221\345\226\234\346\254\242\347\232\204\351\237\263\344\271\220", nullptr));
         retreat->setText(QString());
         pushButton_3->setText(QString());
-        SongInformation->setText(QCoreApplication::translate("MainWindow", "\345\246\202\346\236\234\347\210\261\345\277\230\344\272\206\357\274\210live\357\274\211-  \346\261\252\350\213\217\346\263\267/\345\215\225\344\276\235\347\272\257", nullptr));
+        SongInformation->setText(QString());
         AddToPlaylist->setText(QString());
         ViewComments->setText(QString());
         share->setText(QString());
         download->setText(QString());
-        pause->setText(QString());
+        PlayOrPause->setText(QString());
         like->setText(QString());
         PreviousSong->setText(QString());
         NextSong->setText(QString());
         ListLoop->setText(QString());
+        duration->setText(QCoreApplication::translate("MainWindow", "00:00", nullptr));
+        Play_duration->setText(QCoreApplication::translate("MainWindow", "00:00", nullptr));
         DesktopLyrics->setText(QString());
         MemberSoundEffects->setText(QString());
         LetIsStartListeningTogether->setText(QString());
@@ -501,8 +519,8 @@ public:
         vip->setText(QString());
         vipText->setText(QString());
         Personal_Information->setText(QString());
-        pushButton->setText(QString());
-        pushButton_2->setText(QString());
+        search_for->setText(QString());
+        nightModeButton->setText(QCoreApplication::translate("MainWindow", "\345\244\234\351\227\264\346\250\241\345\274\217", nullptr));
     } // retranslateUi
 
 };
